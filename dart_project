@@ -1,0 +1,84 @@
+import urllib.request
+import json
+import os
+import ssl
+import matplotlib.pyplot as plt
+import numpy as np
+
+def allowSelfSignedHttps(allowed):
+    # bypass the server certificate verification on client side
+    if allowed and not os.environ.get('PYTHONHTTPSVERIFY', '') and getattr(ssl, '_create_unverified_context', None):
+        ssl._create_default_https_context = ssl._create_unverified_context
+
+allowSelfSignedHttps(True) # this line is needed if you use self-signed certificate in your scoring service.
+
+# Request data goes here
+data =  {
+  "Inputs": {
+    "data": [
+      {
+        "Player": "A",
+        "Windspeed": 0.16,
+        "Temperature": 100,
+        " Throws": 3
+      },
+      {
+        "Player": "B",
+        "Windspeed": 0.16,
+        "Temperature": 100,
+        " Throws": 3
+      },{
+        "Player": "C",
+        "Windspeed": 0.16,
+        "Temperature": 100,
+        " Throws": 3
+      },{
+        "Player": "D",
+        "Windspeed": 0.16,
+        "Temperature": 100,
+        " Throws": 3
+      },
+    ]
+  }
+}
+
+body = str.encode(json.dumps(data))
+
+url = 'http://c1a4be24-6448-4bb7-adc2-a452de2b1aa1.westus2.azurecontainer.io/score'
+
+headers = {'Content-Type':'application/json'}
+
+req = urllib.request.Request(url, body, headers)
+
+try:
+    response = urllib.request.urlopen(req)
+
+    result = response.read()
+    print(result)
+
+    # Assume result_json is your result converted to JSON
+    result_json = json.loads(result)
+
+    # Check if result_json is a dictionary
+    if isinstance(result_json, dict):
+        # Iterate over each item in the dictionary
+        for key, value in result_json.items():
+            # Check if the value is a list
+            if isinstance(value, list):
+                # Plot the list as a bar chart
+                plt.figure() # create a new figure for each plot
+                
+                players = [player_data["Player"] for player_data in data["Inputs"]["data"]]
+                colors = ['b', 'y', 'r', 'm'] # Add more colors if you have more players
+                
+                plt.bar(players, value, color=colors[:len(players)])
+                
+                plt.title(key)
+                plt.show()
+
+except urllib.error.HTTPError as error:
+    print("The request failed with status code: " + str(error.code))
+
+    # Print the headers - they include the requert ID and the timestamp, which are useful for debugging the failure
+    print(error.info())
+    print(error.read().decode("utf8", 'ignore'))
